@@ -1,0 +1,9 @@
+output/
+
+.snakemake
+*.gz
+log.txt
+
+00-data-prep/
+00-snakemake.py
+
