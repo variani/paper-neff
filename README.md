@@ -1,5 +1,8 @@
 # paper-neff
-Scripts for the Neff paper 
+
+Scripts for the manuscript, 
+Ziyatdinov, et al. "Estimating the effective sample size in association studies of quantitative traits." bioRxiv (2019),
+https://www.biorxiv.org/content/10.1101/2019.12.15.877217v2.full.
 
 ## Analysis steps
 
