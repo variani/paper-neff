@@ -3,6 +3,7 @@ library(tidyverse)
 library(devtools)
 load_all("~/git/variani/matlm") # gwas assoc. model
 load_all("~/git/variani/bigcov") # split bed by batches
+load_all("~/git/variani/biglmmz") # impute/scal large matrices 
 
 library(BEDMatrix) # read bed from file & avoid loading into RAM
 
@@ -12,7 +13,7 @@ library(plyr)
 
 ## args
 args <- commandArgs(trailingOnly = TRUE)
-trait <- ifelse(is.na(args[1]), "bmi", args[1])
+trait <- ifelse(is.na(args[1]), "height", args[1])
 file_out <- ifelse(is.na(args[2]), "tmp.tsv.gz", args[2])
 
 ## parallel
@@ -22,11 +23,11 @@ parallel <- (cores > 1)
 if(parallel) { doParallel::registerDoParallel(cores = cores) }
 
 ## par
-nsnps_batch <- 250
+nsnps_batch <- 150
 
 ## data
 file_bed <- "output/ukb.bed"
-file_phen <- "output/phen.tsv.gz"
+file_phen <- "output/phen.sync.tsv.gz"
 
 ## bed
 bed <- BEDMatrix(file_bed)
@@ -35,15 +36,11 @@ ids_bed <- rownames(bed)
 # fix id names such "0_ID_ID"
 ids_bed <- ids_bed %>% strsplit("_") %>% sapply(function(x) tail(x, 1))
 
-## phen: load phen, align ids with bed, extract y
+## phen: load phen sync. with bed ids
 phen <- read_tsv(file_phen, col_types = c("ccdddddd"))
-ids_phen <- phen[["IID"]]
-
-ind_phen <- match(ids_phen, ids_bed) 
-stopifnot(any(!is.na(ind_phen)))
 
 stopifnot(trait %in% colnames(phen))
-y <- phen[[trait]] %>% .[ind_phen] # now y is aligned with bed by ids
+y <- phen[[trait]] 
 
 ## assoc
 bdat <- bigdat(bed, batch_size = nsnps_batch)
@@ -52,7 +49,11 @@ B <- bigdat_nbatch(bdat)
 assoc <- llply(seq(B), function(b) {
   cat(" -", b, "/", B, "\n")
   X <- bigdat_batch(bdat, b)
-  matlm::matreg0(y, X, verbose = 2)
+
+  Z <- impute_mean(X)
+  Z <- scale_z(Z)
+
+  matlm::matreg0(y, Z, verbose = 2)
 }, .parallel = parallel) %>% bind_rows
 
 ## save

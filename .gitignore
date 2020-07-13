@@ -1,9 +1,12 @@
 output/
 
+*temp*
+
 .snakemake
 *.gz
 log.txt
 
+# raw data of UKB (not for sharing)
 00-data-prep/
 00-snakemake.py
 
