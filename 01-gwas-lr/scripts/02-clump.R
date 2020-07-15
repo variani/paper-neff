@@ -4,10 +4,10 @@ library(glue)
 library(bigsnpr)
 
 ## par
-r2 <- 0.01 # plink default: 0.01
+r2 <- 0.1 # plink default: 0.01
 size <- 250 # plink default: 250 (distance in kb)
 
-file_bed <- "output/ukb.bed"
+file_bed <- "output/gen.bed"
 
 ## args
 args <- commandArgs(trailingOnly = TRUE)

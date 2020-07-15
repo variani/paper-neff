@@ -1,4 +1,4 @@
-# paper-neff
+ paper-neff
 
 Scripts for the manuscript, 
 Ziyatdinov, et al. "Estimating the effective sample size in association studies of quantitative traits." bioRxiv (2019),
@@ -21,19 +21,19 @@ Output:
 
 ```
 output/
-├── ids2.txt
-├── ids.txt
-├── phen.tsv.gz
-├── phen.sync.tsv.gz
-├── ukb.bed
-├── ukb.bim
-├── ukb.fam
-└── ukb.log
+├── gen.bed
+├── gen.bim
+├── gen.fam
+├── gen.ids
+├── gen.log
+├── gen.variants
+├── phen.bed.tsv.gz
+└── phen.tsv.gz
 ```
 
 ### Step 1. GWAS by Linear Regression (GWAS-LR)
 
-GWAS by LR:
+GWAS by LR
 
 - script [01-gwas-lr/scripts/01-gwas-lr.R](01-gwas-lr/scripts/01-gwas-lr.R)
 
@@ -41,11 +41,38 @@ GWAS by LR:
 snakemake -s snakemake.py gwas_lr 
 ```
 
+Output:
+
+```
+output/gwas-lr/
+├── bmi.tsv.gz
+├── height.tsv.gz
+├── hip.tsv.gz
+├── waist.tsv.gz
+├── weight.tsv.gz
+└── whr.tsv.gz
+```
+
 ### Step 3: Clumping with p-values from GWAS-LR
 
 Clumping by 
-[bigsnpr](https://privefl.github.io/bigsnpr/reference/snp_clumping.html):
+[bigsnpr](https://privefl.github.io/bigsnpr/reference/snp_clumping.html)
+using the default plink settings (r2 0.01, window 250kb)
 
 - script: [01-gwas-lr/scripts/02-clump.R](01-gwas-lr/scripts/02-clump.R)
 
+Output:
 
+```
+output/clump/
+├── height.tsv.gz
+└── height.txt.gz
+```
+
+### Step 4: Heritability estimation by low-rank LMM
+
+- script: [02-h2-lmm/scripts/01-h2.R](02-h2-lmm/scripts/01-h2.R)
+
+### Step 5: GWAS by low-rank LMM (GWAS-LMM)
+
+- script: [03-gwas-lmm/scripts/01-gwas-lmm-chr.R](03-gwas-lmm/scripts/01-gwas-lmm-chr.R)
