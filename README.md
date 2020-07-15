@@ -6,10 +6,10 @@ https://www.biorxiv.org/content/10.1101/2019.12.15.877217v2.full.
 
 ## Analysis steps
 
-0. UKB data preparation
+### Step 0. UKB data preparation
 
 - 336K unrelated White British individuals
-- >600K genotypes SNPs, autosomes, MAF >0.1%, QC
+- &gt;600K genotypes SNPs, autosomes, MAF >0.1%, QC
 - 6 traits: bmi, weight, waist, hip, height, whr
   - mean-impute missing trait values (<1% of missingness)
   - project out covariates: age/sex + PC1-20
@@ -31,7 +31,7 @@ output/
 └── ukb.log
 ```
 
-1. GWAS by Linear Regression (LR)
+### Step 1. GWAS by Linear Regression (GWAS-LR)
 
 GWAS by LR:
 
@@ -40,6 +40,8 @@ GWAS by LR:
 ```
 snakemake -s snakemake.py gwas_lr 
 ```
+
+### Step 3: Clumping with p-values from GWAS-LR
 
 Clumping by 
 [bigsnpr](https://privefl.github.io/bigsnpr/reference/snp_clumping.html):
