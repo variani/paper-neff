@@ -6,7 +6,7 @@ Scripts for the Neff paper
 0. UKB data preparation
 
 - 336K unrelated White British individuals
-- HapMap3 imputed SNPs, autosomes
+- >600K genotypes SNPs, autosomes, MAF >0.1%, QC
 - 6 traits: bmi, weight, waist, hip, height, whr
   - mean-impute missing trait values (<1% of missingness)
   - project out covariates: age/sex + PC1-20

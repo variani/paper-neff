@@ -1,4 +1,4 @@
-## inc
+# inc
 library(devtools)
 load_all("~/git/hemostat/gxefam")
 load_all("~/git/variani/matlm")

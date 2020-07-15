@@ -5,7 +5,7 @@ library(bigsnpr)
 
 ## par
 r2 <- 0.01 # plink default: 0.01
-size <- 250 # plink default: 0.01 (distance in kb)
+size <- 250 # plink default: 250 (distance in kb)
 
 file_bed <- "output/ukb.bed"
 
@@ -27,7 +27,7 @@ assoc <- glue("output/gwas-lr/{trait}.tsv.gz") %>% read_tsv
 
 # ceheck sync. of snps names
 
-snps_bed <- read_lines("output/snps.txt.gz")
+snps_bed <- read_lines("output/gen.variants")
 #stopifnot(all(assoc[[1]] == snps_bed))
 
 scores <- tibble(snp = snps_bed) %>%

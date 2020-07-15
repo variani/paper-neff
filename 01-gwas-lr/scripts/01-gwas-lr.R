@@ -26,15 +26,11 @@ if(parallel) { doParallel::registerDoParallel(cores = cores) }
 nsnps_batch <- 150
 
 ## data
-file_bed <- "output/ukb.bed"
-file_phen <- "output/phen.sync.tsv.gz"
+file_bed <- "output/gen.bed"
+file_phen <- "output/phen.bed.tsv.gz"
 
 ## bed
 bed <- BEDMatrix(file_bed)
-ids_bed <- rownames(bed)
-
-# fix id names such "0_ID_ID"
-ids_bed <- ids_bed %>% strsplit("_") %>% sapply(function(x) tail(x, 1))
 
 ## phen: load phen sync. with bed ids
 phen <- read_tsv(file_phen, col_types = c("ccdddddd"))
@@ -53,7 +49,14 @@ assoc <- llply(seq(B), function(b) {
   Z <- impute_mean(X)
   Z <- scale_z(Z)
 
-  matlm::matreg0(y, Z, verbose = 2)
+  assoc <- matlm::matreg0(y, Z, verbose = 2)
+
+  n_hits <- filter(assoc, pval < 5e-8) %>% nrow
+  if(n_hits > 0) {
+    cat(" -- #hits:", n_hits, "/", nrow(assoc), "\n")
+  }
+
+  assoc
 }, .parallel = parallel) %>% bind_rows
 
 ## save
