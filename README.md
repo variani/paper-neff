@@ -76,3 +76,23 @@ output/clump/
 ### Step 5: GWAS by low-rank LMM (GWAS-LMM)
 
 - script: [03-gwas-lmm/scripts/01-gwas-lmm-chr.R](03-gwas-lmm/scripts/01-gwas-lmm-chr.R)
+
+## Common R code
+
+```r
+library(tidyverse)
+library(BEDMatrix)
+
+file_bed <- "output/gen.bed"
+file_phen <- "output/phen.bed.tsv.gz"
+
+# read genotypes from bed
+snps <- read_lines("output/gen.variants")
+bed <- BEDMatrix(file_bed, p = length(snps))
+colnames(bed) <- snps
+
+# read phenotypes
+phen <- read_tsv(file_phen, col_types = c("ccdddddd"))
+stopifnot(trait %in% colnames(phen))
+y <- phen[[trait]] 
+```
