@@ -3,11 +3,26 @@
 # - Clumping variants using p-values from GWAS-LR
 
 TRAITS = ["bmi", "weight", "waist", "hip", "height", "whr"]
-#TRAITS = ["height", "bmi"]
+#TRAITS = ["height"]
+NTOP_H2 = [100, 500, 1000, 2000]
+# NTOP_H2 = [100, 500]
 
 rule output:
     output: "output/"
     shell: "mkdir -p {output}"
+
+#-----------------------
+# Estimating h2
+#-----------------------
+
+rule h2:
+    input: expand("output/h2/{trait}.{ntop}.tsv.gz", trait = TRAITS, ntop = NTOP_H2)
+
+rule h2_trait:
+    input: "output/clump/{trait}.tsv.gz"
+    output: "output/h2/{trait}.{ntop}.tsv.gz"
+    params: trait = "{trait}", ntop = "{ntop}"
+    shell: "Rscript 02-h2-lmm/scripts/02-h2-top.R {params.trait} {params.ntop} {output}"
 
 #-----------------------
 # Clumping

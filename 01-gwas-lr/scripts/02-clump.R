@@ -11,7 +11,7 @@ file_bed <- "output/gen.bed"
 
 ## args
 args <- commandArgs(trailingOnly = TRUE)
-trait <- ifelse(is.na(args[1]), "weight", args[1])
+trait <- ifelse(is.na(args[1]), "height", args[1])
 basename_out <- ifelse(is.na(args[2]), "tmp", args[2])
 
 ## parallel
@@ -19,11 +19,16 @@ cores <- parallel::detectCores()
 cores <- ifelse(cores > 1, cores - 1, cores)
 
 ## read GWAS LR summary statistics
+snps <- read_lines("output/gen.variants")
 assoc <- glue("output/gwas-lr/{trait}.tsv.gz") %>% read_tsv
 #  predictor           beta      se zscore  pval
 #  <chr>              <dbl>   <dbl>  <dbl> <dbl>
 #1 1:818802:A:G_A -0.00472  0.00365 -1.29  0.197
 #2 1:833068:G:A_A -0.000885 0.00397 -0.223 0.824
+
+assoc <- mutate(assoc,
+  predictor = str_remove(predictor, "_.$"))
+stopifnot(all(assoc$predictor %in% snps))
 
 # ceheck sync. of snps names
 

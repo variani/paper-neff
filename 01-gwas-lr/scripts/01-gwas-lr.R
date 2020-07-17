@@ -30,11 +30,12 @@ file_bed <- "output/gen.bed"
 file_phen <- "output/phen.bed.tsv.gz"
 
 ## bed
-bed <- BEDMatrix(file_bed)
+snps <- read_lines("output/gen.variants")
+bed <- BEDMatrix(file_bed, p = length(snps))
+colnames(bed) <- snps
 
 ## phen: load phen sync. with bed ids
 phen <- read_tsv(file_phen, col_types = c("ccdddddd"))
-
 stopifnot(trait %in% colnames(phen))
 y <- phen[[trait]] 
 

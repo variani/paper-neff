@@ -1,68 +1,43 @@
 ### inc
-library(dplyr)
-library(readr)
+library(tidyverse)
+
+library(BEDMatrix)
 
 library(devtools)
-load_all("~/git/hemostat/ukbjass/")
-load_all("~/git/hemostat/ukbpower/biglmm/")
+load_all("~/git/variani/biglmmz/")
 
-library(gaston)
-options(gaston.auto.set.stats = FALSE)
+## parameters
+trait <- "height"
+file_bed <- "output/gen.bed"
+file_phen <- "output/phen.bed.tsv.gz"
 
-### par from Snakemake
-if(exists("snakemake")) {
-  test <- snakemake@params[["test"]] %>% as.logical
-  dir_bed <- snakemake@params[["dir_bed"]]
+## data
+bed <- BEDMatrix(file_bed)
+phen <- read_tsv(file_phen, col_types = c("ccdddddd"))
 
-  trait <- snakemake@params[["trait"]]
-  num_sel <- snakemake@params[["num_sel"]] %>% as.integer
-  
-  output <- snakemake@output[["file"]]
-} else {
-  dir_bed <- "out/bed_top/"
-  test <- TRUE
-  trait <- "body_BMIz_orth"
-  num_sel <- 500
-  
-  output <- "tmp.tsv"
-}
+stopifnot(trait %in% colnames(phen))
+y <- phen[[trait]] 
 
-cat(" - test: ", test, "\n")
-cat(" - dir_bed: ", dir_bed, "\n")
-cat(" - num_sel: ", num_sel, "\n")
-cat(" - trait: ", trait, "\n")
-cat(" - output: ", output, "\n")
+## subset 
+n <- 500
+p <- 100
 
-### bed files
-stopifnot(file.exists(dir_bed))
-file_bed <- list.files(dir_bed, "\\.bed$", full = TRUE) %>% grep(trait, ., value = TRUE)
-print(file_bed)
-stopifnot(length(file_bed) == 1)
+y <- y[1:n]
+Zg <- bed[1:n, 1:p]
 
-y <- ukbjass_val_trait(trait, impute_mean = TRUE)
-  
-bed <- read.bed.matrix(file_bed)
-ids_bed <- paste(bed@ped$famid, bed@ped$id, sep = "_")
-stopifnot(all(ids_bed == names(y)))
-
-if(test) {
-  nrow1 <- 1e3
-  y <- head(y, nrow1)
-  Zg <- as.matrix(bed[seq(nrow1), seq(num_sel)])
-} else {
-  Zg <- as.matrix(bed[, seq(num_sel)])
-}
-
-# impute missing entries
+## impute missing entries
 Zg <- impute_mean(Zg)
 
-Zgrm <- scale_zg(Zg) # need for EVD-based calculation of the trace factor
+cols_sd <- which(apply(Zg, 2, sd) > 0)
+Zg <- Zg[, cols_sd]
 
-### lmm
-#mod <- biglmm(y, Z = Zg, scale = TRUE, verbose = 2)
-mod <- biglmm(y, Z = Zgrm, scale = FALSE, verbose = 2)
+## Zgrm -> scaled Z / sqrt(M)
+Zgrm <- scale_zg(Zg) 
 
-### evd
+## lmm
+mod <- biglmmz(y, Z = Zgrm, scale = FALSE, verbose = 2)
+
+## evd
 K <- crossprod(Zgrm)
 lamdas <- eigen(K)$values
 
@@ -72,9 +47,8 @@ h2 <- mod$gamma
 
 trace_factor <- (sum(1/(h2*lamdas + (1-h2))) + (N-M)/(1-h2)) / N
 
-### write
+## output table
 tab <- tibble(trait = trait, N = N, M = M, h2 = h2, trace_factor = trace_factor)
 
-write_tsv(tab, output)
 
   
