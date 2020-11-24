@@ -4,7 +4,7 @@ library(tidyverse)
 library(cowplot)
 theme_set(theme_minimal())
 
-N <- 1500; M <- 200; h2 <- 0.8
+N <- 1500; M <- 200; h2 <- 0.15
 
 # simulate genotypes
 set.seed(33)
@@ -17,6 +17,7 @@ colnames(Z) <- Z_names
 # select 2/3 for GRM, 1/3 to testing
 z_grm <- seq(floor(0.75*M))
 z_test <- seq(max(z_grm), M)
+# z_test <- z_grm
 
 # simulate data
 Z_means <- colMeans(Z, na.rm = TRUE)
@@ -60,7 +61,7 @@ K <- crossprod(Zgrm)
 assoc3 <- lapply(z_test, function(i) {
   Xc <- matrix(Z[, i] - Z_means[i], ncol = 1)
   est <- biglmmz:::biglr_fixef(gamma = m2$gamma, s2 = m2$s2,
-    y = y, Xmat = Xc, Z = Zgrm, K = K, REML = TRUE)
+    y = yc, Xmat = Xc, Z = Zgrm, K = K) # , REML = FALSE)
   tibble(predictor = Z_names[i], zscore = est$b / sqrt(diag(est$bcov)))
 }) %>% bind_rows %>%
   mutate(pval = pchisq(zscore*zscore, df = 1, lower = FALSE)) %>% 
