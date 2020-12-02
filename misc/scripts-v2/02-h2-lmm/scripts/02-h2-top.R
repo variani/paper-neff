@@ -9,14 +9,14 @@ load_all("~/git/variani/biglmmz/")
 
 ## arguments
 args <- commandArgs(trailingOnly = TRUE)
-trait <- ifelse(is.na(args[1]), "whr", args[1])
-n_top <- ifelse(is.na(args[2]), 500, as.integer(args[2]))
+trait <- ifelse(is.na(args[1]), "height", args[1])
+n_top <- ifelse(is.na(args[2]), 1000, as.integer(args[2]))
 file_out <- ifelse(is.na(args[3]), "tmp.tsv.gz", args[3])
 
 ## parameters
 file_bed <- "output/gen.bed"
 file_phen <- "output/phen.bed.tsv.gz"
-file_clump <- glue("output/clump/{trait}.tsv.gz")
+file_clump <- glue("output/clump-plink/{trait}.tsv.gz")
 
 ## data
 # read genotypes from bed
@@ -32,14 +32,15 @@ y <- phen[[trait]]
 # read top variants
 clump <- read_tsv(file_clump) %>% arrange(pval) 
 if(nrow(clump) < n_top) {
-  stop(glue("#rows in clump ({nrow(clump)}) < #top ({n_top})"))
+  warning(glue("#rows in clump ({nrow(clump)}) < #top ({n_top})"))
 }
 
 clump <- head(clump, n_top)
 snps_top <- clump$snp
 
 ## impute missing entries
-Zg <- bed[, snps_top]
+cols <- which(snps %in% snps_top)
+Zg <- bed[, cols] 
 
 # Zg <- impute_mean(Zg)
 # stopifnot(!any(apply(Zg, 2, sd) == 0))
@@ -64,7 +65,8 @@ mod <- biglmmz(y, Z = Zg, impute = TRUE, scale = TRUE, verbose = 2)
 # tab <- tibble(trait = trait, N = N, M = M, s2 = mod$s2, h2 = h2,
 #   trace_factor = trace_factor)
 
-tab <- mod$ess
+tab <- mod$ess %>%
+  mutate(trait = trait)
 
 ## save
 write_tsv(tab, file_out)

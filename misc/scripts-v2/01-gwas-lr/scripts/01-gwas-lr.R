@@ -35,7 +35,7 @@ bed <- BEDMatrix(file_bed, p = length(snps))
 colnames(bed) <- snps
 
 ## phen: load phen sync. with bed ids
-phen <- read_tsv(file_phen, col_types = c("ccdddddd"))
+phen <- read_tsv(file_phen, col_types = c("ccddddddddd"))
 stopifnot(trait %in% colnames(phen))
 y <- phen[[trait]] 
 
@@ -56,6 +56,10 @@ assoc <- llply(seq(B), function(b) {
   if(n_hits > 0) {
     cat(" -- #hits:", n_hits, "/", nrow(assoc), "\n")
   }
+
+  # clean
+  rm(X, Z)
+  gc()
 
   assoc
 }, .parallel = parallel) %>% bind_rows
