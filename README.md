@@ -71,6 +71,8 @@ output/clump/
 
 ### Step 4: Heritability estimation by low-rank LMM
 
+![](figures/h2.png)
+
 - script: [02-h2-lmm/scripts/01-h2.R](02-h2-lmm/scripts/01-h2.R)
 
 ### Step 5: GWAS by low-rank LMM (GWAS-LMM)
