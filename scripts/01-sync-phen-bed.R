@@ -19,7 +19,6 @@ phen <- read_tsv(file_phen) %>%
 ids_phen <- phen$id
 
 ids_common <- intersect(ids_bed, ids_phen)
-ids_sync <- ids_bed[ids_bed %in% ids_common]
 
 phen_sync <- tibble(id = ids_common) %>% left_join(phen) %>%
   select(id, everything())
@@ -43,7 +42,20 @@ inormal <- function(x) qnorm((rank(x, na.last = "keep") - 0.5) / sum(!is.na(x)))
 phen_sync <- mutate_at(phen_sync, traits, impute) 
 phen_sync <- mutate_at(phen_sync, traits, inormal) 
 
+## pcs
+pcs <- list.files("dat/", "pcs", full = TRUE) %>%
+  lapply(read_tsv) %>% bind_cols
+names(pcs)[1] <- "id"
+pcs <- select(pcs, id, starts_with("PC")) %>%
+  mutate(id = as.character(id))
+
+stopifnot(all(ids_common %in% pcs$id))
+pcs_sync <- tibble(id = ids_common) %>% left_join(pcs) %>%
+  select(id, everything())
+stopifnot(all(!is.na(pcs_sync$PC1)))
+
 ## save
 write_lines(phen_sync$id, "sync.ids")
 write_tsv(phen_sync, "phen.sync.tsv.gz")
+write_tsv(pcs_sync, "pcs.sync.tsv.gz")
 

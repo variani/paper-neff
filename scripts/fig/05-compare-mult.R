@@ -21,7 +21,7 @@ vals_traits <- c("bmi", "height", "hip", "waist", "weight", "whr")
 labs_traits <- c("BMI", "Height", "HIP", "Waist", "Weight", "WHR")
 # vals_traits <- c("height", "bmi")
 ntop <- 1000
-vals_chr <- 1:22
+vals_chr <- 22
 
 vals_est <- c("mean", "median")
 vals_filt <- paste0("f", 0:3)

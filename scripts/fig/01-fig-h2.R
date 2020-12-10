@@ -13,7 +13,7 @@ cols <- c("grey50", cols)
 
 ## arguments
 traits <- c("bmi", "weight", "waist", "hip", "height", "whr")
-ntop <- c(500, 1000, 2000)
+ntop <- c(100, 500, 1000, 2000)
 
 ## read h2 results
 tab <- lapply(traits, function(t) {
