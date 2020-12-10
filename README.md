@@ -4,18 +4,21 @@ https://www.biorxiv.org/content/10.1101/2019.12.15.877217v2.full.
 
 ## Analysis steps
 
-### Step 0. UKB data preparation
+### Step 0. UK Biobank data preparation
 
-- 336K unrelated White British individuals
-- &gt;600K genotypes SNPs, autosomes, MAF >0.1%, QC
+- 336K unrelated individuals of British ancestry
+- &gt;600K genotyped SNPs, autosomes, MAF >0.1%, QC
 - 6 traits: bmi, weight, waist, hip, height, whr
-  - mean-impute missing trait values (<1% of missingness)
+  - impute missing trait values by mean (<1% of missingness)
   - project out covariates: age/sex + PC1-20
   - apply rank-based inverse normal transformation
 
-Scripts to process raw UKB data are not shared.
+Scripts to process raw UK Biobank data are not shared.
 
 ### Step 1. GWAS by Linear Regression (GWAS-LR)
+
+- script: [scripts/08-gwas-lm-top.R](scripts/08-gwas-lm-top.R)
+- snakemake command: `snakemake -s sm.py lm`
 
 ### Step 3: Clumping with p-values from GWAS-LR
 
@@ -25,8 +28,7 @@ Scripts to process raw UKB data are not shared.
 
 ![](figures/h2.png)
 
+### Step 5: GWAS by low-rank LMM (GWAS-LMM) using LOCO
 
-### Step 5: GWAS by low-rank LMM (GWAS-LMM)
-
-- script: [scripts/05-gwas-lmm-top.R](scripts/05-gwas-lmm-top.R)
+- script: [scripts/07-gwas-lmm-loco-top.R](scripts/05-gwas-lmm-top.R)
 
