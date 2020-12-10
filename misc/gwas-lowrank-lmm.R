@@ -1,80 +1,112 @@
-library(biglmmz)
-library(matlm)
 library(tidyverse)
+library(glue)
 library(cowplot)
 theme_set(theme_minimal())
 
-N <- 1500; M <- 200; h2 <- 0.15
+library(devtools)
+load_all("~/git/variani/bigcov") # split bed by batches
+load_all("~/git/variani/matlm") # split bed by batches
+load_all("~/git/variani/biglmmz") # split bed by batches
+
+N <- 10e3; h2 <- 0.5
+Mc <- 500; M <- 1000
+Mchr <- M / 2
 
 # simulate genotypes
-set.seed(33)
+# set.seed(1)
 freqs <- rep(0.5, M) # allele freq. = 0.5
 Z <- sapply(freqs, function(f) rbinom(N, 2, f)) 
 
 Z_names <- paste0("z", seq(M))
 colnames(Z) <- Z_names 
 
-# select 2/3 for GRM, 1/3 to testing
-z_grm <- seq(floor(0.75*M))
-z_test <- seq(max(z_grm), M)
-# z_test <- z_grm
+Z_sc <- scale(Z)
 
 # simulate data
-Z_means <- colMeans(Z, na.rm = TRUE)
-Z_freq <- Z_means / 2  # Z_means = 2 * Z_freq
-Z_sd <- sqrt(2 * Z_freq * (1 - Z_freq))
+z_c <- sample(seq(M), Mc)
 
-Z_sc <- sweep(Z, 2, Z_means, "-")
-Z_sc <- sweep(Z_sc, 2, Z_sd , "/")
+b <- rnorm(Mc, 0, sqrt(h2/Mc))
+y <- Z_sc[, z_c] %*% b + rnorm(N, 0, sqrt(1 - h2))
 
-b <- rnorm(M, 0, sqrt(h2/M))
-y <- Z_sc %*% b + rnorm(N, 0, sqrt(1 - h2))
+y_sc <- scale(y)
 
 # fit model on scaled genotypes and normalized by sqrt(M)
-m1 <- biglmmz(y, Z = Z, scale = TRUE)
+z_grm <- seq(Mchr)
+z_grm <- z_grm[z_grm %in% z_c]
 
-Zgrm <- Z[, z_grm]
-Zgrm <- sweep(Zgrm, 2, Z_means[z_grm], "-")
-Zgrm <- sweep(Zgrm, 2, Z_sd[z_grm], "/")
-Zgrm <- Zgrm / sqrt(M)
+Mgrm <- length(z_grm)
+Zgrm <- Z[, z_grm] 
 
-m2 <- biglmmz(y, Z = Zgrm, scale = FALSE)
-
-h2 <- data.frame(model = c("all casual", "75% causal"),
-  h2 = c(m1$gamma, m2$gamma))
+mod <- biglmmz(y, Z = Zgrm, scale = TRUE)
 
 ## assoc by LR
-Z_test <- Z[, z_test]
-assoc1 <- matlm(y ~ 1, data.frame(y = y), pred = Z_test)$tab %>% arrange(pval)
+z_test <- seq(M)
+z_test <- z_test[!(z_test %in% z_grm)]
 
-## assoc by LMM (EVD) 
-# - prohibitive at large N, but here N = 1500, so we can stor NxN GRM
-GRM <- tcrossprod(Zgrm)
-h2 <- m2$gamma
-V <- h2*GRM + (1-h2)*diag(N)
+Mtest <- length(z_test)
+Z_test_sc <- scale(Z[, z_test])
 
-assoc2 <- matlm(y ~ 1, data.frame(y = y), varcov = V, pred = Z_test)$tab %>% arrange(pval)
+assoc1 <- matlm(y ~ 1, data.frame(y = y_sc), pred = Z_test_sc, stats_full = TRUE) %>%
+  .[["tab"]] %>% arrange(pval) %>% mutate(causal = (predictor %in% Z_names[z_c]))
 
-## assoc by low-rank LMM (no EVD)
-yc <- y - mean(y)
-K <- crossprod(Zgrm)
-assoc3 <- lapply(z_test, function(i) {
-  Xc <- matrix(Z[, i] - Z_means[i], ncol = 1)
-  est <- biglmmz:::biglr_fixef(gamma = m2$gamma, s2 = m2$s2,
-    y = yc, Xmat = Xc, Z = Zgrm, K = K) # , REML = FALSE)
-  tibble(predictor = Z_names[i], zscore = est$b / sqrt(diag(est$bcov)))
-}) %>% bind_rows %>%
-  mutate(pval = pchisq(zscore*zscore, df = 1, lower = FALSE)) %>% 
-  arrange(pval)
+## Z as FBM
+file_z <- tempfile("misc-") %>% basename
+file_z_bk <- glue("{file_z}.bk")
+Zgrm_fbm <- as_FBM(Zgrm, type = "integer", backingfile = file_z) 
+
+# pre-compute K
+cat(" - pre-compute K\n")
+K <- big_crossprodSelf(Zgrm_fbm, fun.scaling = big_scale2(M = Mgrm))[]
+
+gamma <- mod$gamma
+s2 <- mod$s2
+comp <- s2 * c(gamma, 1 - gamma)
+# comp <- c(gamma, 1 - gamma)
+
+## assoc by LMM
+beg <- seq(1, Mtest, 100)
+end <- c(beg[-1] - 1, Mtest)
+nb <- length(beg)
+
+assoc2 <- lapply(seq(nb), function(b) {
+  cat(" -", b, "/", nb, "\n")
+
+  cols <- seq(beg[b], end[b])
+  Xmat <- Z_test_sc[, cols, drop = FALSE]
+
+  XVt <- biglr_cprodMatInv2(comp, Zgrm_fbm, X = Xmat, K = K, transpose = TRUE) # Vi' X
+  XVX <- colSums(XVt * Xmat) 
+  b <- as.numeric(crossprod(XVt, y_sc)) / XVX
+  se <- 1 / sqrt(XVX)
+  assoc <- tibble(predictor = colnames(Xmat), beta = b, se = se) %>%
+    mutate(zscore = beta / se, 
+      pval = pchisq(zscore*zscore, df = 1, lower = FALSE))
+  assoc
+}) %>% bind_rows
+unlink(file_z_bk)
+
+assoc2 <- arrange(assoc2, pval) %>% mutate(causal = (predictor %in% Z_names[z_c]))
 
 ## scatter plot of p-values: assoc1 (LR) vs assoc2 (LMM)
-ptab <- assoc1 %>% select(predictor, pval) %>% rename(pval_LR = pval) %>%
-  left_join(assoc2 %>% select(predictor, pval) %>% rename(pval_LMM = pval)) %>%
-  left_join(assoc3 %>% select(predictor, pval) %>% rename(pval_LMM_LowRank = pval))
+ptab1 <- rename(assoc1, b_LR = b, se_LR = se, p_LR = pval)
+ptab2 <- rename(assoc2, b_LMM = beta, se_LMM = se, p_LMM = pval)
+ptabc <- tibble(predictor = Z_names[z_c], b_causal = b)
 
-p1 <- ggplot(ptab, aes(-log10(pval_LR), -log10(pval_LMM))) + geom_point() + geom_abline(linetype = 3)
-p2 <- ggplot(ptab, aes(-log10(pval_LR), -log10(pval_LMM_LowRank))) + geom_point() + geom_abline(linetype = 3)
-p3 <- ggplot(ptab, aes(-log10(pval_LMM), -log10(pval_LMM_LowRank))) + geom_point() + geom_abline(linetype = 3)
+ptab <- left_join(ptab1, ptab2, by = "predictor") %>% left_join(ptabc, by = "predictor")
+ptab_signif <- filter(ptab, p_LR < 5e-8 & p_LMM < 5e-8)
 
-g <- plot_grid(p1, p2, p3)
+p01 <- ggplot(ptab, aes(abs(b_causal), abs(b_LR))) + geom_point() + geom_abline(linetype = 3) + geom_smooth(method = "lm")
+p02 <- ggplot(ptab, aes(abs(b_causal), abs(b_LMM))) + geom_point() + geom_abline(linetype = 3) + geom_smooth(method = "lm")
+
+lims <- c(0.05, 0.1)
+up_p <- function(p) p + xlim(lims) + ylim(lims) + geom_smooth(method = "lm", color = "red") 
+
+p1 <- ggplot(ptab, aes(abs(b_LR), abs(b_LMM))) + geom_point() + geom_abline(linetype = 3) + geom_smooth(method = "lm")
+p2 <- ggplot(ptab, aes(1/se_LR^2, 1/se_LMM^2)) + geom_point() + geom_abline(linetype = 3)
+p3 <- ggplot(ptab, aes(-log10(p_LR), -log10(p_LMM))) + geom_point() + geom_abline(linetype = 3)
+
+g <- plot_grid(p01, p02, p1, 
+  up_p(p01), up_p(p02), up_p(p1),
+  p2, p3, labels = "auto")
+ggsave("tmp.png", plot = g, dpi = 100) 
 

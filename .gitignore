@@ -1,6 +1,9 @@
+dat/
 *output/
+out/
 
 *temp*
+*tmp*
 
 .snakemake
 *.gz

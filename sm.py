@@ -10,11 +10,16 @@ CHR = list(range(1, 23))
 #-----------------------
 
 rule fig:
-    input: "figures/h2.png"
+    input: ["figures/h2.png", "figures/clump.png"]
 
 rule fig_h2:
     input: "scripts/fig/01-fig-h2.R"
     output: "figures/h2.png"
+    shell: "Rscript {input} && cp tmp.png {output}"
+
+rule fig_clump:
+    input: "scripts/fig/03-clump-pvals.R"
+    output: "figures/clump.png"
     shell: "Rscript {input} && cp tmp.png {output}"
 
 #-----------------------

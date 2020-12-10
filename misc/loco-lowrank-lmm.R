@@ -153,3 +153,4 @@ p2 <- ggplot(ptab, aes(h2_hat, gamma, fill = estimator, group = estimator)) +
 ## combind plots
 g <- plot_grid(p1, p2, labels = "auto")
 
+ggsave("tmp.png", plot = g, dpi = 100)
