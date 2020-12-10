@@ -22,9 +22,13 @@ Scripts to process raw UK Biobank data are not shared.
 
 ### Step 3: Clumping with p-values from GWAS-LR
 
+- results: [out/clump/](out/clump/)
+![](figures/clump.png)
+
 ### Step 4: Heritability estimation by low-rank LMM
 
 - script: [scripts/04-estimate-h2.R](scripts/04-estimate-h2.R)
+- results: [out/h2/](out/h2/)
 
 ![](figures/h2.png)
 
