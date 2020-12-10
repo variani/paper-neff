@@ -22,7 +22,9 @@ Scripts to process raw UK Biobank data are not shared.
 
 ### Step 3: Clumping with p-values from GWAS-LR
 
+- plink command: `plink --bfile <bed> --out <out> --clump <assoc> --clump-p1 0.1 --clump-p2 0.1 --clump-r2 0.01`
 - results: [out/clump/](out/clump/)
+
 ![](figures/clump.png)
 
 ### Step 4: Heritability estimation by low-rank LMM
